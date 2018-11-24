@@ -38,6 +38,7 @@
           :slot="tableColumn.template ? 'default' : 'undefined'"
           :v-node="tableColumn.template(row, $index, column)"/>
       </el-table-column>
+      <slot name="default"/>
     </el-table>
     <pagination
       v-if="isPagination"
@@ -91,6 +92,7 @@ export default {
     },
     pagination: { type: Boolean, default: true },
     search: { type: Boolean, default: false },
+    searchMode: { type: String, default: 'server' },
     border: { type: Boolean, default: true },
     initSelected: {
       type: Array,
@@ -110,11 +112,12 @@ export default {
       listLoading: true,
       total: 0,
       isSearchTextChange: false,
-      clientSearch: false,
+      clientSearch: this.searchMode === 'client',
       rawData: [],
       currentPage: 1,
       isPagination: this.pagination,
-      searchDataBak: []
+      searchDataBak: [],
+      searchFields: []
     }
   },
   computed: {
@@ -148,16 +151,24 @@ export default {
     this.fetchData()
   },
   mounted () {
-    this.initSelect()
+    this.initTable()
   },
   methods: {
+    initTable () {
+      this.initSelect()
+      this.searchFields = this.getSearchFields()
+    },
     fetchData () {
       this.listLoading = true
-      if (!this.clientSearch) {
-        if (typeof this.getData === 'function') {
+      if (this.clientSearch) {
+        this.clientDataHandle()
+      } else {
+        if (typeof this.getData !== 'function') {
+          this.clientDataHandle() // 仅当getData为获取数据的api时才支持远程搜索及分页，否则全部转为本地模式
+        } else {
           this.getData(this.queryParams).then((response) => {
             this.tableData = response.rows ? response.rows : response
-            this.clientSearch = !response.rows
+            this.clientSearch = !response.rows// 如果后端接口返回的数据结构符合分页的要求，则自动转为本地模式
             if (response.rows && this.isPagination === false) {
               this.isPagination = true
             }
@@ -166,11 +177,7 @@ export default {
             this.rawData = this.tableData
             this.initSelect()
           })
-        } else {
-          this.clientDataHandle()
         }
-      } else {
-        this.clientDataHandle()
       }
     },
     clientDataHandle () {
@@ -185,26 +192,51 @@ export default {
       this.queryParams.search = text
       this.isSearchTextChange = true
     },
+    /* 设置进行本地搜索的列，目前是设置了sortable的列 */
+    getSearchFields () {
+      const searchFieldByColumns = this.columns
+        .filter(
+          cv => cv.sortable
+        ).map(
+          cv => cv.field
+        )
+      const searchFieldBySlot = this.$slots.default
+        .filter(
+          cv => {
+            return cv.componentInstance && cv.componentInstance.sortable !== false
+          }
+        ).map(
+          cv => cv.componentInstance.$options.propsData.prop
+        )
+      searchFieldByColumns.forEach(function (v) {
+        searchFieldBySlot.push(v)
+      })
+      return searchFieldBySlot
+    },
     searchData () {
       if (this.isSearchTextChange) {
         this.tableData = this.rawData
         this.currentPage = 1
-        if (!this.clientSearch) {
-          this.fetchData()
-        } else {
+        if (this.clientSearch) {
           if (this.queryParams.search === '') {
             this.total = this.tableData.length
             this.initSelect()
           } else {
-            this.searchDataBak = this.rawData.filter((item) => {
-              const searchFields = this.columns.filter(cv => cv.sortable).map(cv => cv.field)
-              return searchFields.map(field => (item[field] ? item[field].toString() : ''))
-                .filter(cv => cv.match(this.queryParams.search)).length > 0
-            })
+            this.searchDataBak = this.rawData
+              .filter(item => {
+                return this.searchFields
+                  .map(
+                    field => (item[field] ? item[field].toString() : '')
+                  ).filter(
+                    cv => cv.match(this.queryParams.search)
+                  ).length > 0
+              })
             this.tableData = this.searchDataBak
             this.total = this.tableData.length
           }
           this.initSelect()
+        } else {
+          this.fetchData()
         }
       }
       this.isSearchTextChange = false
