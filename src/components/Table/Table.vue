@@ -16,12 +16,9 @@
       v-loading="listLoading"
       ref="table"
       :data="viewData"
-      :border="border"
+      v-bind="originProps"
       class="el-table"
-      fit
-      :height="height ? height : null"
       element-loading-text="Loading"
-      highlight-current-row
       @select-all="handleSelectAll"
       @select="handleSelect">
       <el-table-column
@@ -69,11 +66,20 @@ export default {
         return []
       }
     },
+    originProps: {
+      type: Object,
+      default () {
+        return {
+          highlightCurrentRow: true,
+          fit: true,
+          border: true
+        }
+      }
+    },
     getData: {
       type: [Function, Array],
       required: true
     },
-    height: { type: String },
     refresh: {
       type: Boolean,
       default: false
@@ -93,7 +99,6 @@ export default {
     pagination: { type: Boolean, default: true },
     search: { type: Boolean, default: false },
     searchMode: { type: String, default: 'server' },
-    border: { type: Boolean, default: true },
     initSelected: {
       type: Array,
       default () {
@@ -207,7 +212,7 @@ export default {
           }
         ).map(
           cv => cv.componentInstance.$options.propsData.prop
-        )
+        ) || []
       searchFieldByColumns.forEach(function (v) {
         searchFieldBySlot.push(v)
       })
