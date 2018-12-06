@@ -205,14 +205,14 @@ export default {
         ).map(
           cv => cv.field
         )
-      const searchFieldBySlot = this.$slots.default
+      const searchFieldBySlot = this.$slots.default ? this.$slots.default
         .filter(
           cv => {
             return cv.componentInstance && cv.componentInstance.sortable !== false
           }
         ).map(
           cv => cv.componentInstance.$options.propsData.prop
-        ) || []
+        ) : []
       searchFieldByColumns.forEach(function (v) {
         searchFieldBySlot.push(v)
       })
