@@ -3,7 +3,7 @@
     <DefaultTable
       :search="true"
       :columns="columns"
-      :get-data="tableData">
+      :get-data="getData">
       <el-table-column
         sortable
         prop="date"
@@ -25,6 +25,7 @@
 
 <script>
 import DefaultTable from './components/Table/Table'
+import axios from 'axios'
 
 export default {
   name: 'App',
@@ -37,19 +38,74 @@ export default {
         {
           date: '2016-05-02',
           name: '王小虎',
-          address: '上海市普陀区金沙江路 1518 弄'
-        }, {
+          address: '上海市普陀区金沙江路 1518 弄',
+          index: 1
+        },
+        {
           date: '2016-05-04',
           name: '王小虎',
-          address: '上海市普陀区金沙江路 1517 弄'
-        }, {
+          address: '上海市普陀区金沙江路 1517 弄',
+          index: 2
+        },
+        {
           date: '2016-05-01',
           name: '王小虎',
-          address: '上海市普陀区金沙江路 1519 弄'
-        }, {
+          address: '上海市普陀区金沙江路 1519 弄',
+          index: 3
+        },
+        {
           date: '2016-05-03',
           name: '王小虎',
-          address: '上海市普陀区金沙江路 1516 弄'
+          address: '上海市普陀区金沙江路 1516 弄',
+          index: 4
+        },
+        {
+          date: '2016-05-02',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1518 弄',
+          index: 5
+        },
+        {
+          date: '2016-05-04',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1517 弄',
+          index: 6
+        },
+        {
+          date: '2016-05-01',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1519 弄',
+          index: 7
+        },
+        {
+          date: '2016-05-03',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1516 弄',
+          index: 8
+        },
+        {
+          date: '2016-05-02',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1518 弄',
+          index: 9
+        },
+        {
+          date: '2016-05-04',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1517 弄',
+          index: 10
+        },
+        {
+          date: '2016-05-01',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1519 弄',
+          index: 11
+        },
+        {
+          date: '2016-05-03',
+          name: '王小虎',
+          address: '上海市普陀区金沙江路 1516 弄',
+          index: 12
         }
       ],
       columns: [
@@ -77,12 +133,28 @@ export default {
           align: 'center'
         },
         {
-          field: 'mobile',
+          field: 'index',
           title: '手机号',
           sortable: true,
           align: 'center'
         }
       ]
+    }
+  },
+  methods: {
+    getData (queryParam) {
+      const index = queryParam.offset / queryParam.pageSize + 1
+      return new Promise((resolve, reject) => {
+        axios.get(`https://www.easy-mock.com/mock/5b5550199c2bd4581c709e00/mock/tableData?pageIndex=${index}`).then((response) => {
+          const data = {
+            total: response.data.total,
+            rows: response.data.data
+          }
+          resolve(data)
+        }).catch(e => {
+          reject(e)
+        })
+      })
     }
   }
 }
