@@ -4,7 +4,7 @@
       <slot name="toolbar"/>
       <el-input
         v-if="search"
-        :value="queryParams.search"
+        v-model="queryParams.search"
         placeholder="搜索"
         class="el-input"
         style="float: right; min-width: 20%; max-width: 15vh"
@@ -15,32 +15,19 @@
     <el-table
       v-loading="listLoading"
       ref="table"
+      :row-key="rowKey"
       :data="viewData"
       v-bind="originProps"
-      class="el-table"
       element-loading-text="Loading"
+      @row-click="$emit('row-click', $event)"
       @filter-change="handleFilterChange"
       @current-change="handleCurrentChange"
       @select-all="handleSelectAll"
       @sort-change="handleSortChange"
       @select="handleSelect">
-      <el-table-column
-        v-for="tableColumn in columns"
-        :filters="tableColumn.filters"
-        :filter-method="tableColumn.filterMethod"
-        :label="tableColumn.title"
-        :key="tableColumn.field"
-        :prop="tableColumn.field"
-        :sortable="tableColumn.sortable"
-        :formatter="tableColumn.formatter"
-        :type="tableColumn.type"
-        :align="tableColumn.align || 'center'"
-        :min-width="tableColumn.width">
-        <transparent
-          slot-scope="{ row, $index, column }"
-          :slot="tableColumn.template ? 'default' : 'undefined'"
-          :v-node="tableColumn.template(row, $index, column)"/>
-      </el-table-column>
+      <my-column
+        v-for="(tableColumn, index) in columns" :table-column="tableColumn" :key="index">
+      </my-column>
       <slot name="default"/>
     </el-table>
     <pagination
@@ -58,11 +45,14 @@
 <script>
 import pagination from './components/pagination'
 import transparent from './components/transparent'
+import myColumn from './components/MyColumn'
+
 export default {
   name: 'DefaultTable',
   components: {
     pagination,
-    transparent
+    transparent,
+    myColumn
   },
   props: {
     columns: {
@@ -103,7 +93,7 @@ export default {
     },
     pagination: { type: Boolean, default: true },
     search: { type: Boolean, default: false },
-    searchMode: { type: String, default: 'server' },
+    searchMode: { type: String, default: 'client' },
     initSelected: {
       type: Array,
       default () {
@@ -114,6 +104,19 @@ export default {
     paginationLayout: {
       type: String,
       default: 'total, sizes, prev, pager, next, jumper'
+    },
+    draggable: {
+      type: Boolean,
+      default: false
+    },
+    onDragEnd: {
+      type: Function
+    },
+    rowKey: {
+      type: String,
+      default () {
+        return ''
+      }
     }
   },
   data () {
@@ -127,7 +130,8 @@ export default {
       currentPage: 1,
       isPagination: this.pagination,
       searchDataBak: [],
-      searchFields: []
+      searchFields: [],
+      dragSort: null
     }
   },
   computed: {
@@ -143,11 +147,14 @@ export default {
     }
   },
   watch: {
-    refresh () {
-      if (this.refresh) {
-        this.fetchData()
-        this.$emit('refreshed')
-      }
+    refresh: {
+      handler: function (newVal) {
+        if (newVal) {
+          this.fetchData()
+          this.$emit('update:refresh', false)
+        }
+      },
+      immediate: true
     },
     initSelected () {
       this.initSelect()
@@ -168,6 +175,7 @@ export default {
     initTable () {
       this.initSelect()
       this.searchFields = this.getSearchFields()
+      this.setDragSort()
     },
     fetchData () {
       this.listLoading = true
@@ -187,6 +195,10 @@ export default {
             this.listLoading = false
             this.rawData = this.tableData
             this.initSelect()
+            this.setDragSort()
+          }).catch(e => {
+            this.listLoading = false
+            console.log(e) // for debug
           })
         }
       }
@@ -198,6 +210,7 @@ export default {
       this.listLoading = false
       this.rawData = this.searchDataBak.length > 0 ? this.rawData : this.tableData
       this.initSelect()
+      this.setDragSort()
     },
     setSearchText (text) {
       this.queryParams.search = text
@@ -228,6 +241,7 @@ export default {
       if (this.isSearchTextChange) {
         this.tableData = this.rawData
         this.currentPage = 1
+        this.queryParams.offset = 0 // 远程搜索时offset清0,防止搜索时index不对
         if (this.clientSearch) {
           if (this.queryParams.search === '') {
             this.total = this.tableData.length
@@ -308,6 +322,19 @@ export default {
         this.queryParams.sortOrder = order === 'ascending' ? 'asc' : 'desc'
         this.fetchData()
       }
+    },
+    setDragSort () {
+      this.$nextTick(() => {
+        const el = this.$refs.table && this.$refs.table.$el.querySelector('.el-table__body-wrapper > table > tbody')
+        if (this.draggable && this.onDragEnd && el) {
+            import('sortablejs').then(Sortable => {
+              if (this.dragSort) this.dragSort.destroy() // 防止在Dom上重复绑定事件
+              this.dragSort = Sortable.create(el, {
+                onEnd: evt => this.onDragEnd(evt)
+              })
+            })
+        }
+      })
     }
   }
 }
@@ -316,5 +343,12 @@ export default {
 <style scoped>
   .toolbar, .el-table {
     margin-bottom: 10px;
+  }
+</style>
+<style>
+  .sortable-ghost{
+    opacity: .8;
+    color: #fff!important;
+    background: #42b983!important;
   }
 </style>

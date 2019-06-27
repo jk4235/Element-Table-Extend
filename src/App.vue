@@ -2,6 +2,7 @@
   <div id="app">
     <DefaultTable
       :search="true"
+      search-mode="server"
       :columns="columns"
       :get-data="getData">
       <el-table-column
