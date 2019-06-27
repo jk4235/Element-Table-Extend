@@ -15,7 +15,6 @@
     <el-table
       v-loading="listLoading"
       ref="table"
-      :row-key="rowKey"
       :data="viewData"
       v-bind="originProps"
       element-loading-text="Loading"
@@ -111,12 +110,6 @@ export default {
     },
     onDragEnd: {
       type: Function
-    },
-    rowKey: {
-      type: String,
-      default () {
-        return ''
-      }
     }
   },
   data () {
