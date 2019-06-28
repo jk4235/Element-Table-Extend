@@ -154,6 +154,7 @@ export default {
     },
     getData () {
       this.currentPage = 1
+      this.queryParams.offset = 0
       this.clearSearchData()
       this.fetchData()
     }
